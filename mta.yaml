@@ -1,0 +1,69 @@
+_schema-version: "3.1"
+ID: ZAPYardCAPMBatch1
+description: A simple CAP project.
+version: 1.0.0
+modules:
+- name: ZAPYardCAPMBatch1-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: ZAPYardCAPMBatch1-db
+  - name: uaa_ZAPYardCAPMBatch1
+    properties:
+      TARGET_CONTAINER: ZAPYardCAPMBatch1
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+  build-parameters:
+    builder: npm-ci
+- name: ZAPYardCAPMBatch1-db-deployer
+  type: hdb
+  path: gen/db
+  requires:
+  - name: ZAPYardCAPMBatch1-db
+  - name: uaa_ZAPYardCAPMBatch1
+  parameters:
+    buildpack: nodejs_buildpack
+- name: zapyardcapmbatch1-approuter
+  type: approuter.nodejs
+  path: zapyardcapmbatch1-approuter
+  requires:
+  - name: ZAPYardCAPMBatch1_html_repo_runtime
+  - name: uaa_ZAPYardCAPMBatch1
+  parameters:
+    disk-quota: 256M
+    memory: 256M
+resources:
+- name: ZAPYardCAPMBatch1-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    config:
+      schema: ZAPYardCAPMBatch1
+    service: hana
+    service-name: ZAPYardCAPMBatch1
+    service-plan: hdi-shared
+  properties:
+    hdi-service-name: ${service-name}
+- name: ZAPYardCAPMBatch1_html_repo_runtime
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-plan: app-runtime
+- name: uaa_ZAPYardCAPMBatch1
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: ZAPYardCAPMBatch1-xsuaa-service
+    service-plan: application
+parameters:
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+  - builder: custom
+    commands:
+    - npm ci
+    - npx -p @sap/cds-dk cds build --production
